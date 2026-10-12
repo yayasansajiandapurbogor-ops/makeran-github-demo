@@ -75,7 +75,19 @@
   .cta .btn{background:#fff;color:var(--primary);font-size:1.05rem;padding:14px 32px}
   .cta .btn:hover{background:#eef3ff;transform:translateY(-1px)}
   footer{text-align:center;padding:26px 20px;color:var(--muted);font-size:.9rem;border-top:1px solid var(--border)}
-  @media(max-width:768px){.hero h1{font-size:2rem}.compare,.grid3{grid-template-columns:1fr}section{padding:56px 0}.chat-body{height:300px}.msg{max-width:90%}nav .btn{padding:8px 12px;font-size:.85rem}.brand{font-size:.95rem}}
+  .table-wrap{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow-x:auto}
+  #places{width:100%;min-width:760px;border-collapse:collapse;font-size:.93rem}
+  #places th{background:#fbfcfe;text-align:left;padding:14px 16px;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+  #places td{padding:13px 16px;border-bottom:1px dashed var(--border);color:#334155;vertical-align:middle;transition:.2s}
+  #places tbody tr:last-child td{border-bottom:none}
+  #places tbody tr:hover td{background:#f8faff}
+  #places .name{font-weight:600;color:var(--text)}
+  #places .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+  #places .tag{display:inline-block;font-size:.78rem;color:var(--primary);background:#eef3ff;padding:4px 10px;border-radius:999px;font-weight:600;white-space:nowrap}
+  #places td[colspan]{text-align:center;color:var(--muted);padding:32px 16px}
+  #places a{display:inline-block;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--primary);font-weight:600;font-size:.85rem;text-decoration:none;white-space:nowrap;transition:.2s}
+  #places a:hover{background:#eef3ff;border-color:var(--primary)}
+  @media(max-width:768px){.hero h1{font-size:2rem}.compare,.grid3{grid-template-columns:1fr}section{padding:56px 0}.chat-body{height:300px}.msg{max-width:90%}nav .btn{padding:8px 12px;font-size:.85rem}.brand{font-size:.95rem}#places td[colspan]{text-align:left}}
 </style>
 </head>
 <body>
@@ -174,7 +186,23 @@
   </div>
 </section>
 
-<!-- 5. FOOTER & CTA -->
+<!-- 5. DATA TEMPAT (SUPABASE) -->
+<section id="data-tempat">
+  <div class="container">
+    <h2>Data Tempat</h2>
+    <p class="sub">Dimuat langsung dari database Supabase, diurutkan dari jumlah review terbanyak.</p>
+    <div class="table-wrap">
+      <table id="places">
+        <thead>
+          <tr><th>Nama</th><th>Kategori</th><th>Rating</th><th>Review</th><th>Kota</th><th>Telepon</th><th>Maps</th></tr>
+        </thead>
+        <tbody><tr><td colspan="7">Memuat data...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 6. FOOTER & CTA -->
 <section class="cta">
   <div class="container">
     <h2>Ingin Karyawan Digital seperti ini?</h2>
@@ -253,6 +281,66 @@
       : 'Baik, tidak ada file yang saya pindahkan. Saya akan menunggu instruksi berikutnya 👍', 1100);
     setBusy(false);
   }
+</script>
+
+<script>
+  const SUPABASE_URL = 'https://eqqvvfdmwtnlemhelxrt.supabase.co'; //isi dengan SUPABASE_URL
+  const SUPABASE_KEY = 'sb_publishable_TYWLtFUYtlX9-hqn8QvREw_mbXAYwTN'; // publishable key, BUKAN secret key
+
+  async function loadPlaces() {
+    const tbody = document.querySelector('#places tbody');
+    try {
+      const res = await fetch(
+        SUPABASE_URL + '/rest/v1/places?select=*&order=reviews_count.desc.nullslast&limit=100',
+        { headers: { apikey: SUPABASE_KEY } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+
+      tbody.replaceChildren();
+      for (const p of rows) {
+        const tr = document.createElement('tr');
+        const cells = [
+          [p.title, 'name'],
+          [p.category_name, 'tag'],
+          [p.total_score != null ? '⭐ ' + p.total_score : null, 'num'],
+          [typeof p.reviews_count === 'number' ? p.reviews_count.toLocaleString('id-ID') : p.reviews_count, 'num'],
+          [p.city, ''],
+          [p.phone, 'num']
+        ];
+        for (const [v, cls] of cells) {
+          const td = document.createElement('td');
+          const empty = v == null || v === '';
+          if (cls === 'tag' && !empty) {
+            const span = document.createElement('span');
+            span.className = 'tag';
+            span.textContent = v;
+            td.appendChild(span);
+          } else {
+            td.textContent = empty ? '-' : v;
+            if (cls && cls !== 'tag') td.className = cls;
+          }
+          tr.appendChild(td);
+        }
+        const td = document.createElement('td');
+        if (p.url && p.url.startsWith('https://')) {
+          const a = document.createElement('a');
+          a.href = p.url;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = 'Buka';
+          td.appendChild(a);
+        }
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+      if (!rows.length) tbody.innerHTML = '<tr><td colspan="7">Belum ada data.</td></tr>';
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="7">Gagal memuat data.</td></tr>';
+      console.error(e);
+    }
+  }
+  loadPlaces();
 </script>
 </body>
 </html>
